@@ -1,17 +1,30 @@
 import { useState } from 'react';
+import emailjs from '@emailjs/browser';
 import { Mail, Phone } from 'lucide-react';
 import { useScrollAnimation } from '../hooks/useScrollAnimation';
 import contactPic from '../assets/contact-pic.jpg';
 
 export const Contact = () => {
     const [ref, isVisible] = useScrollAnimation();
-    const [formData, setFormData] = useState({ name: '', email: '' });
+    const [formData, setFormData] = useState({ name: '', email: '', honeypot: '' });
+    const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (formData.name && formData.email) {
-            alert(`¡Gracias ${formData.name}! Me pondré en contacto contigo a través de ${formData.email}`);
-            setFormData({ name: '', email: '' });
+        if (formData.honeypot) return; // bot trap, no enviar
+
+        setStatus('sending');
+        try {
+            await emailjs.send(
+                'TU_SERVICE_ID',
+                'TU_TEMPLATE_ID',
+                { from_name: formData.name, from_email: formData.email },
+                'TU_PUBLIC_KEY'
+            );
+            setStatus('sent');
+            setFormData({ name: '', email: '', honeypot: '' });
+        } catch {
+            setStatus('error');
         }
     };
 
@@ -42,11 +55,22 @@ export const Contact = () => {
                             <form onSubmit={handleSubmit} className="mt-12 max-w-[500px]">
                                 <input
                                     type="text"
+                                    name="honeypot"
+                                    value={formData.honeypot}
+                                    onChange={(e) => setFormData({ ...formData, honeypot: e.target.value })}
+                                    className="hidden"
+                                    tabIndex={-1}
+                                    autoComplete="off"
+                                />
+                                <input
+                                    type="text"
                                     placeholder="Nombre"
                                     value={formData.name}
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                     className="block w-full mb-6 border-2 border-black/30 p-4 text-[1.5rem] outline-none focus:border-black transition-colors"
                                     required
+                                    minLength={2}
+                                    maxLength={100}
                                 />
                                 <input
                                     type="email"
@@ -55,21 +79,21 @@ export const Contact = () => {
                                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                     className="block w-full mb-6 border-2 border-black/30 p-4 text-[1.5rem] outline-none focus:border-black transition-colors"
                                     required
+                                    maxLength={150}
                                 />
                                 <button
                                     type="submit"
-                                    className="bg-[#332e29] text-white px-12 py-6 uppercase tracking-[0.2rem] text-[1.6rem] hover:bg-black transition-all duration-300 font-normal">
-                                    ENVIAR
+                                    disabled={status === 'sending'}
+                                    className="bg-[#332e29] text-white px-12 py-6 uppercase tracking-[0.2rem] text-[1.6rem] hover:bg-black transition-all duration-300 font-normal disabled:opacity-50">
+                                    {status === 'sending' ? 'ENVIANDO...' : 'ENVIAR'}
                                 </button>
+                                {status === 'sent' && <p className="mt-4 text-green-700 text-[1.2rem]">¡Mensaje enviado! Te responderé pronto.</p>}
+                                {status === 'error' && <p className="mt-4 text-red-700 text-[1.2rem]">Error al enviar. Intenta de nuevo o escríbeme directo.</p>}
                             </form>
                         </div>
 
                         <div className="h-full min-h-[400px] md:min-h-0">
-                            <img 
-                                src={contactPic}
-                                alt="Contacto - Jefrey Muñoz Rodríguez"
-                                className="w-full h-full object-cover" 
-                            />
+                            <img src={contactPic} alt="Contacto - Jefrey Muñoz Rodríguez" className="w-full h-full object-cover" />
                         </div>
                     </div>
                 </div>

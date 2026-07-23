@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Upload, Copy, Check, X, ImagePlus, ExternalLink, Clock } from 'lucide-react';
+import { LogOut, Upload, Copy, Check, X, ImagePlus, ExternalLink, Clock, Trash2 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { supabase } from '../../lib/supabase';
-import { compressImage } from '../../lib/Imagecompress';
+import { compressImage } from '../../lib/imageCompress';
 
 type GalleryRow = {
     id: string;
@@ -149,6 +149,36 @@ export const AdminPanel = () => {
         setTimeout(() => setCopied(false), 2000);
     };
 
+    const handleDelete = async (galleryId: string, clientName: string) => {
+        const confirm = await Swal.fire({
+            icon: 'warning',
+            title: `¿Eliminar galería de ${clientName}?`,
+            text: 'Se borrarán las fotos y el acceso del cliente. No se puede deshacer.',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#dc2626',
+            ...swalTheme,
+        });
+        if (!confirm.isConfirmed) return;
+
+        const { data: files } = await supabase.storage.from('client-galleries').list(galleryId);
+        if (files && files.length > 0) {
+            const paths = files.map((f) => `${galleryId}/${f.name}`);
+            await supabase.storage.from('client-galleries').remove(paths);
+        }
+
+        const { error } = await supabase.rpc('delete_gallery', { p_gallery_id: galleryId });
+
+        if (error) {
+            Swal.fire({ icon: 'error', title: 'Error al eliminar', text: error.message, ...swalTheme });
+            return;
+        }
+
+        Swal.fire({ icon: 'success', title: 'Galería eliminada', timer: 1200, showConfirmButton: false, ...swalTheme });
+        loadGalleries();
+    };
+
     const daysLeft = (expires: string) => {
         const diff = new Date(expires).getTime() - Date.now();
         return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
@@ -262,14 +292,22 @@ export const AdminPanel = () => {
                                         <Clock className="w-3 h-3" /> {daysLeft(g.expires_at)} días restantes
                                     </p>
                                 </div>
-                                <a
-                                    href={`/galeria/${g.id}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-white/30 group-hover:text-white transition-colors"
-                                    aria-label="Abrir galería">
-                                    <ExternalLink className="w-4 h-4" />
-                                </a>
+                                <div className="flex items-center gap-3">
+                                    <a
+                                        href={`/galeria/${g.id}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-white/30 group-hover:text-white transition-colors"
+                                        aria-label="Abrir galería">
+                                        <ExternalLink className="w-4 h-4" />
+                                    </a>
+                                    <button
+                                        onClick={() => handleDelete(g.id, g.client_name)}
+                                        className="text-white/30 hover:text-red-400 transition-colors"
+                                        aria-label="Eliminar galería">
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
                             </div>
                         ))}
                     </div>

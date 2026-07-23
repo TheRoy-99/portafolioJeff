@@ -101,7 +101,7 @@ export const GalleryAccess = () => {
                     Tu Galería
                 </h1>
                 <p className="text-[1.1rem] text-gray-500 mb-12">
-                    {photos.length} foto{photos.length !== 1 ? 's' : ''} disponible{photos.length !== 1 ? 's' : ''}. Los links expiran en 5 minutos.
+                    {photos.length} foto{photos.length !== 1 ? 's' : ''} disponible{photos.length !== 1 ? 's' : ''}. Los links son válidos por 30 días.
                 </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

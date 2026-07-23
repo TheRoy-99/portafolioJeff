@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import bcrypt from "npm:bcryptjs@2.4.3";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "https://portafolio-jeff-gamma.vercel.app",
+  "Access-Control-Allow-Origin": "https://jefrey-filmmaker-qloqdbcyx-roys-projects-58e88ce4.vercel.app",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
@@ -71,7 +71,7 @@ serve(async (req) => {
     (photos ?? []).map(async (p) => {
       const { data } = await supabase.storage
         .from("client-galleries")
-        .createSignedUrl(p.storage_path, 300);
+        .createSignedUrl(p.storage_path,  2592000);
       return { id: p.id, filename: p.filename, url: data?.signedUrl };
     })
   );

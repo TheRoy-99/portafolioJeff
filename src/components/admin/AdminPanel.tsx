@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { LogOut, Upload, Copy, Check, X, ImagePlus, ExternalLink, Clock, Trash2 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { supabase } from '../../lib/supabase';
-import { compressImage } from '../../lib/imageCompress';
+import { compressImage } from '../../lib/Imagecompress';
 
 type GalleryRow = {
     id: string;
@@ -157,8 +157,8 @@ export const AdminPanel = () => {
             showCancelButton: true,
             confirmButtonText: 'Sí, eliminar',
             cancelButtonText: 'Cancelar',
-            confirmButtonColor: '#dc2626',
             ...swalTheme,
+            confirmButtonColor: '#dc2626',
         });
         if (!confirm.isConfirmed) return;
 

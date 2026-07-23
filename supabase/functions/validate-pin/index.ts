@@ -2,7 +2,16 @@ import { serve } from "https://deno.land/std/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import bcrypt from "npm:bcryptjs@2.4.3";
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
 serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
   const { galleryId, pin } = await req.json();
 
   const supabase = createClient(
@@ -17,7 +26,10 @@ serve(async (req) => {
     .gte("created_at", new Date(Date.now() - 15 * 60 * 1000).toISOString());
 
   if ((count ?? 0) >= 5) {
-    return new Response(JSON.stringify({ error: "Demasiados intentos, espera 15 min" }), { status: 429 });
+    return new Response(JSON.stringify({ error: "Demasiados intentos, espera 15 min" }), {
+      status: 429,
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
   }
 
   const { data: gallery, error } = await supabase
@@ -27,18 +39,27 @@ serve(async (req) => {
     .single();
 
   if (error || !gallery) {
-    return new Response(JSON.stringify({ error: "Galería no encontrada" }), { status: 404 });
+    return new Response(JSON.stringify({ error: "Galería no encontrada" }), {
+      status: 404,
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
   }
 
   if (new Date(gallery.expires_at) < new Date()) {
-    return new Response(JSON.stringify({ error: "Galería expirada" }), { status: 410 });
+    return new Response(JSON.stringify({ error: "Galería expirada" }), {
+      status: 410,
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
   }
 
   await supabase.from("pin_attempts").insert({ gallery_id: galleryId });
 
   const valid = bcrypt.compareSync(pin, gallery.pin_hash);
   if (!valid) {
-    return new Response(JSON.stringify({ error: "PIN incorrecto" }), { status: 401 });
+    return new Response(JSON.stringify({ error: "PIN incorrecto" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
   }
 
   const { data: photos } = await supabase
@@ -56,6 +77,6 @@ serve(async (req) => {
   );
 
   return new Response(JSON.stringify({ photos: signedPhotos }), {
-    headers: { "Content-Type": "application/json" }
+    headers: { ...corsHeaders, "Content-Type": "application/json" }
   });
 });

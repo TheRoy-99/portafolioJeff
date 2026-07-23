@@ -6,6 +6,9 @@ import { Portafolio } from './components/Portafolio';
 import { Contact } from './components/Contact';
 import { Footer } from './components/Footer';
 import { GalleryAccess } from './components/GalleryAccess';
+import { Login } from './components/admin/Login';
+import { AdminPanel } from './components/admin/AdminPanel';
+import { ProtectedRoute } from './components/admin/ProtectedRoute';
 
 const Home = () => (
   <>
@@ -25,6 +28,15 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/galeria/:galleryId" element={<GalleryAccess />} />
+          <Route path="/admin/login" element={<Login />} />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute>
+                <AdminPanel />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
       </div>
     </BrowserRouter>

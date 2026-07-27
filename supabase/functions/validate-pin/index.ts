@@ -2,12 +2,22 @@ import { serve } from "https://deno.land/std/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import bcrypt from "npm:bcryptjs@2.4.3";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "https://jefrey-filmmaker-qloqdbcyx-roys-projects-58e88ce4.vercel.app",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+// dominio fijo real + cualquier preview/deployment de tu proyecto Vercel + local dev
+const isAllowedOrigin = (origin: string) => {
+  return (
+    origin === "https://portafolio-jeff-gamma.vercel.app" ||
+    origin === "http://localhost:5173" ||
+    /^https:\/\/jefrey-filmmaker-[a-z0-9]+-roys-projects-58e88ce4\.vercel\.app$/.test(origin)
+  );
 };
 
 serve(async (req) => {
+  const origin = req.headers.get("Origin") ?? "";
+  const corsHeaders = {
+    "Access-Control-Allow-Origin": isAllowedOrigin(origin) ? origin : "https://portafolio-jeff-gamma.vercel.app",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  };
+
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -71,7 +81,7 @@ serve(async (req) => {
     (photos ?? []).map(async (p) => {
       const { data } = await supabase.storage
         .from("client-galleries")
-        .createSignedUrl(p.storage_path,  2592000);
+        .createSignedUrl(p.storage_path, 2592000);
       return { id: p.id, filename: p.filename, url: data?.signedUrl };
     })
   );

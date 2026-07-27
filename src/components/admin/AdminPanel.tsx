@@ -1,9 +1,25 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Upload, Copy, Check, X, ImagePlus, ExternalLink, Clock, Trash2 } from 'lucide-react';
+import { LogOut, Upload, Copy, Check, X, ImagePlus, ExternalLink, Clock, Trash2, Sparkles } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { supabase } from '../../lib/supabase';
 import { compressImage } from '../../lib/Imagecompress';
+
+const GrainOverlay = () => (
+    <svg className="fixed inset-0 w-full h-full pointer-events-none opacity-[0.04] z-0" xmlns="http://www.w3.org/2000/svg">
+        <filter id="grain-admin">
+            <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch" />
+        </filter>
+        <rect width="100%" height="100%" filter="url(#grain-admin)" />
+    </svg>
+);
+
+const BackgroundOrbs = () => (
+    <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div className="absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full bg-gradient-to-bl from-amber-500/8 to-transparent blur-[100px]" />
+        <div className="absolute bottom-0 -left-40 w-[400px] h-[400px] rounded-full bg-gradient-to-tr from-white/5 to-transparent blur-[100px]" />
+    </div>
+);
 
 type GalleryRow = {
     id: string;
@@ -26,6 +42,7 @@ export const AdminPanel = () => {
     const [copied, setCopied] = useState(false);
     const [galleries, setGalleries] = useState<GalleryRow[]>([]);
     const [dragActive, setDragActive] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const swalTheme = {
         background: '#0a0a0a',
@@ -52,7 +69,7 @@ export const AdminPanel = () => {
     const addFiles = async (fileList: FileList) => {
         setCompressing(true);
         const compressed = await Promise.all(Array.from(fileList).map((f) => compressImage(f)));
-        const newPreviews = compressed.map((file) => ({
+        const newPreviews = compressed.map((file: File) => ({
             file,
             url: URL.createObjectURL(file),
         }));
@@ -185,34 +202,42 @@ export const AdminPanel = () => {
     };
 
     return (
-        <div className="min-h-screen bg-black">
+        <div className="relative min-h-screen bg-black overflow-hidden">
+            <GrainOverlay />
+            <BackgroundOrbs />
+
             {/* Topbar */}
-            <div className="border-b border-white/10 px-8 md:px-16 py-6 flex justify-between items-center">
-                <div>
-                    <span className="text-[0.75rem] uppercase tracking-[0.3rem] text-white/40">Panel</span>
-                    <h1 className="text-[1.5rem] font-semibold text-white uppercase tracking-tight -mt-1">
-                        Galerías de Clientes
-                    </h1>
+            <div className="relative z-10 border-b border-white/10 px-6 md:px-16 lg:px-24 py-6 md:py-8 flex justify-between items-center gap-4">
+                <div className="min-w-0 flex items-center gap-4">
+                    <div className="w-11 h-11 rounded-full bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+                        <Sparkles className="w-5 h-5 text-amber-500/80" />
+                    </div>
+                    <div className="min-w-0">
+                        <span className="text-[0.8rem] uppercase tracking-[0.3rem] text-white/40">Panel</span>
+                        <h1 className="text-[1.4rem] md:text-[2rem] font-semibold text-white uppercase tracking-tight -mt-1 truncate">
+                            Galerías de Clientes
+                        </h1>
+                    </div>
                 </div>
                 <button
                     onClick={handleLogout}
-                    className="flex items-center gap-2 text-[0.9rem] text-white/40 hover:text-white transition-colors">
-                    <LogOut className="w-4 h-4" /> Salir
+                    className="flex items-center gap-2 text-[0.95rem] text-white/60 hover:text-white transition-colors shrink-0 border border-white/15 px-4 py-2.5 md:border-0 md:px-0 md:py-0">
+                    <LogOut className="w-5 h-5" /> <span className="hidden sm:inline">Salir</span>
                 </button>
             </div>
 
-            <div className="max-w-6xl mx-auto px-8 md:px-16 py-14 grid lg:grid-cols-5 gap-12">
+            <div className="relative z-10 max-w-[1400px] mx-auto px-6 md:px-16 lg:px-24 py-10 md:py-20 grid lg:grid-cols-5 gap-10 md:gap-16">
                 {/* Form crear galería */}
                 <div className="lg:col-span-3">
-                    <h2 className="text-[0.85rem] uppercase tracking-[0.3rem] text-white/40 mb-6">Nueva galería</h2>
+                    <h2 className="text-[0.95rem] uppercase tracking-[0.3rem] text-white/40 mb-8">Nueva galería</h2>
 
-                    <form onSubmit={handleSubmit} className="space-y-6">
+                    <form onSubmit={handleSubmit} className="space-y-8">
                         <input
                             type="text"
                             placeholder="Nombre del cliente"
                             value={clientName}
                             onChange={(e) => setClientName(e.target.value)}
-                            className="w-full bg-transparent border-b border-white/20 pb-3 text-[1.3rem] text-white outline-none focus:border-white transition-colors placeholder:text-white/30"
+                            className="w-full bg-transparent border-b border-white/20 pb-4 text-[1.6rem] text-white outline-none focus:border-white transition-colors placeholder:text-white/30"
                             required
                         />
 
@@ -220,21 +245,26 @@ export const AdminPanel = () => {
                             onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
                             onDragLeave={() => setDragActive(false)}
                             onDrop={handleDrop}
-                            className={`border-2 border-dashed p-10 text-center transition-all ${dragActive ? 'border-white bg-white/5' : 'border-white/15'}`}>
-                            <ImagePlus className="w-8 h-8 text-white/40 mx-auto mb-3" />
-                            <p className="text-white/50 text-[0.95rem] mb-4">
+                            className={`border-2 border-dashed p-10 md:p-14 text-center transition-all ${dragActive ? 'border-white bg-white/5' : 'border-white/15'}`}>
+                            <ImagePlus className="w-10 h-10 text-white/40 mx-auto mb-4" />
+                            <p className="text-white/50 text-[1.05rem] mb-5">
                                 {compressing ? 'Optimizando fotos...' : 'Arrastra fotos aquí o'}
                             </p>
-                            <label className="inline-flex items-center gap-2 border border-white/20 px-6 py-2.5 text-white/80 text-[0.9rem] uppercase tracking-wider cursor-pointer hover:bg-white hover:text-black transition-all">
+                            <button
+                                type="button"
+                                onClick={() => fileInputRef.current?.click()}
+                                className="inline-flex items-center gap-2 border border-white/20 px-7 py-3 text-white/80 text-[0.95rem] uppercase tracking-wider cursor-pointer hover:bg-white hover:text-black transition-all touch-manipulation">
                                 <Upload className="w-4 h-4" /> Seleccionar
-                                <input
-                                    type="file"
-                                    multiple
-                                    accept="image/*"
-                                    onChange={async (e) => e.target.files && (await addFiles(e.target.files))}
-                                    className="hidden"
-                                />
-                            </label>
+                            </button>
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                multiple
+                                accept="image/*"
+                                onChange={async (e) => e.target.files && (await addFiles(e.target.files))}
+                                className="absolute w-px h-px opacity-0 overflow-hidden"
+                                style={{ clip: 'rect(0,0,0,0)' }}
+                            />
                         </div>
 
                         {previews.length > 0 && (
@@ -257,13 +287,13 @@ export const AdminPanel = () => {
                         <button
                             type="submit"
                             disabled={status === 'creating' || status === 'uploading'}
-                            className="w-full bg-white text-black px-8 py-4 uppercase tracking-[0.2rem] text-[0.95rem] font-medium hover:bg-white/90 transition-all duration-300 disabled:opacity-40">
+                            className="w-full bg-white text-black px-8 py-5 uppercase tracking-[0.2rem] text-[1.05rem] font-medium hover:bg-white/90 transition-all duration-300 disabled:opacity-40 shadow-[0_0_40px_rgba(255,255,255,0.08)]">
                             {status === 'creating' ? 'Creando galería...' : status === 'uploading' ? 'Subiendo fotos...' : 'Crear Galería'}
                         </button>
                     </form>
 
                     {status === 'done' && result && (
-                        <div className="mt-8 border border-white/15 p-6">
+                        <div className="mt-8 border border-amber-500/25 bg-amber-500/[0.03] p-6">
                             <p className="text-[0.75rem] uppercase tracking-[0.2rem] text-white/40 mb-3">Listo para compartir</p>
                             <p className="text-[0.95rem] text-white/60 break-all mb-2">{result.link}</p>
                             <p className="text-[1.8rem] font-bold text-white tracking-[0.3rem] mb-5">PIN {result.pin}</p>
@@ -279,17 +309,17 @@ export const AdminPanel = () => {
 
                 {/* Lista galerías recientes */}
                 <div className="lg:col-span-2">
-                    <h2 className="text-[0.85rem] uppercase tracking-[0.3rem] text-white/40 mb-6">Recientes</h2>
-                    <div className="space-y-3">
+                    <h2 className="text-[0.95rem] uppercase tracking-[0.3rem] text-white/40 mb-8">Recientes</h2>
+                    <div className="space-y-4">
                         {galleries.length === 0 && (
-                            <p className="text-white/30 text-[0.9rem]">Sin galerías todavía</p>
+                            <p className="text-white/30 text-[1rem]">Sin galerías todavía</p>
                         )}
                         {galleries.map((g) => (
-                            <div key={g.id} className="border border-white/10 p-4 flex justify-between items-center gap-3 group hover:border-white/25 transition-colors">
+                            <div key={g.id} className="border border-white/10 p-5 flex justify-between items-center gap-3 group hover:border-white/25 transition-colors">
                                 <div className="min-w-0">
-                                    <p className="text-white text-[1rem] font-medium truncate">{g.client_name}</p>
-                                    <p className="text-white/40 text-[0.8rem] flex items-center gap-1.5 mt-1">
-                                        <Clock className="w-3 h-3" /> {daysLeft(g.expires_at)} días restantes
+                                    <p className="text-white text-[1.15rem] font-medium truncate">{g.client_name}</p>
+                                    <p className="text-white/40 text-[0.85rem] flex items-center gap-1.5 mt-1.5">
+                                        <Clock className="w-3.5 h-3.5" /> {daysLeft(g.expires_at)} días restantes
                                     </p>
                                 </div>
                                 <div className="flex items-center gap-3">
